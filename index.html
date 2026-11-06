@@ -7,7 +7,7 @@
   <meta name="description" content="Calculadora de câmbio Metical e Rublo" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --navy: #5c0a2c;
@@ -378,40 +378,201 @@
     }
   });
 
-  document.getElementById("btnPdf").addEventListener("click", function () {
-    var t = textoCotacao();
-    if (!t) return;
-    if (!window.jspdf || !window.jspdf.jsPDF) return;
-    var JsPDF = window.jspdf.jsPDF;
-    var doc = new JsPDF({ unit: "mm", format: "a4" });
-    var margin = 20;
-    var y = 22;
+  function roundRect(ctx, x, y, w, h, r) {
+    var rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function buildCotacaoCanvas(enviaTxt, recebeTxt, dataTxt) {
+    var W = 1080;
+    var H = 1528;
+    var canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext("2d");
+
+    var grad = ctx.createLinearGradient(0, 0, W * 0.15, H);
+    grad.addColorStop(0, "#5c0a2c");
+    grad.addColorStop(0.55, "#4a0824");
+    grad.addColorStop(1, "#3a061c");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    var outer = 42;
+    var inner = 56;
+    ctx.strokeStyle = "#d4bc8a";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(outer, outer, W - outer * 2, H - outer * 2);
+    ctx.strokeStyle = "#b8965a";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(inner, inner, W - inner * 2, H - inner * 2);
+
+    var cx = W / 2;
+    var y = 130;
+
     var logoImg = document.querySelector(".logo-wrap img");
-    if (logoImg && logoImg.src) {
+    var logoDrawn = false;
+    if (logoImg && logoImg.complete && logoImg.naturalWidth) {
       try {
-        var lw = 70;
-        var lh = 40;
-        doc.addImage(logoImg.src, "JPEG", (210 - lw) / 2, y, lw, lh);
-        y += lh + 10;
+        var lw = 240;
+        var lh = lw * (logoImg.naturalHeight / logoImg.naturalWidth);
+        ctx.save();
+        roundRect(ctx, cx - lw / 2 - 8, y - 8, lw + 16, lh + 16, 18);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.drawImage(logoImg, cx - lw / 2, y, lw, lh);
+        ctx.restore();
+        y += lh + 40;
+        logoDrawn = true;
       } catch (e) {}
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(92, 10, 44);
-    doc.text("Câmbio & Transferências | Jr. Jamal", 105, y, { align: "center" });
-    y += 14;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(13);
-    doc.setTextColor(28, 18, 22);
-    var lines = t.split(String.fromCharCode(10));
-    for (var i = 1; i < lines.length; i++) {
-      var line = lines[i];
-      if (!line) { y += 6; continue; }
-      doc.text(line, margin, y);
-      y += 9;
+    if (!logoDrawn) y += 20;
+
+    // COTAÇÃO pill
+    var pillText = "COTAÇÃO";
+    ctx.font = "700 22px Inter, Segoe UI, sans-serif";
+    var pillW = ctx.measureText(pillText).width + 56;
+    var pillH = 44;
+    var pillX = cx - pillW / 2;
+    roundRect(ctx, pillX, y, pillW, pillH, 999);
+    ctx.strokeStyle = "#d4bc8a";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.fillStyle = "#d4bc8a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(pillText, cx, y + pillH / 2 + 1);
+    y += pillH + 44;
+
+    // Title
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 62px 'Playfair Display', Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("Câmbio & Transferências", cx, y);
+    y += 50;
+
+    ctx.fillStyle = "#d4bc8a";
+    ctx.font = "600 36px 'Playfair Display', Georgia, serif";
+    ctx.fillText("Jr. Jamal", cx, y);
+    y += 42;
+
+    ctx.fillStyle = "#b8965a";
+    ctx.font = "500 24px Inter, Segoe UI, sans-serif";
+    ctx.fillText(dataTxt, cx, y);
+    y += 34;
+
+    // gold divider
+    ctx.strokeStyle = "#b8965a";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 180, y);
+    ctx.lineTo(cx + 180, y);
+    ctx.stroke();
+    y += 50;
+
+    // main quote card
+    var cardX = 110;
+    var cardW = W - 220;
+    var cardY = y;
+    var cardH = 460;
+    roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.fillStyle = "#14080e";
+    ctx.fill();
+    ctx.strokeStyle = "#b8965a";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    var rowY = cardY + 78;
+    function drawRow(label, value, last) {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#d4bc8a";
+      ctx.font = "700 20px Inter, Segoe UI, sans-serif";
+      ctx.fillText(label, cardX + 48, rowY);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 56px Inter, Segoe UI, sans-serif";
+      ctx.fillText(value, cardX + 48, rowY + 58);
+      if (!last) {
+        ctx.strokeStyle = "rgba(184,150,90,0.28)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 48, rowY + 88);
+        ctx.lineTo(cardX + cardW - 48, rowY + 88);
+        ctx.stroke();
+        rowY += 130;
+      }
     }
-    doc.save("cotacao-jr-jamal.pdf");
+    drawRow("Envia", enviaTxt, false);
+    drawRow("Recebe", recebeTxt, false);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#d4bc8a";
+    ctx.font = "700 18px Inter, Segoe UI, sans-serif";
+    ctx.fillText("Câmbio do dia", cardX + 48, rowY + 28);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "600 28px Inter, Segoe UI, sans-serif";
+    ctx.fillText(dataTxt, cardX + 48, rowY + 68);
+
+    y = cardY + cardH + 40;
+
+    // LINK card
+    var linkCardH = 120;
+    roundRect(ctx, cardX, y, cardW, linkCardH, 22);
+    ctx.fillStyle = "#1a0c12";
+    ctx.fill();
+    ctx.strokeStyle = "#b8965a";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#d4bc8a";
+    ctx.font = "700 16px Inter, Segoe UI, sans-serif";
+    ctx.fillText("LINK", cardX + 48, y + 38);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "500 26px Inter, Segoe UI, sans-serif";
+    ctx.fillText("https://is.gd/CambioJrJamal", cardX + 48, y + 78);
+
+    return canvas;
+  }
+
+  function dadosCotacao() {
+    var entrada = parseNum(document.getElementById("entrada").value);
+    var saida = direcao === "mzn_rub" ? entrada / taxa / MARGEM : entrada * taxa;
+    if (!(entrada > 0) || !(saida > 0)) return null;
+    var enviaMoeda = direcao === "mzn_rub" ? "MT" : "RUB";
+    var recebeMoeda = direcao === "mzn_rub" ? "RUB" : "MT";
+    return {
+      envia: fmt(entrada, 0) + " " + enviaMoeda,
+      recebe: fmt(Math.round(saida), 0) + " " + recebeMoeda,
+      data: taxaData
+    };
+  }
+
+  document.getElementById("btnPdf").addEventListener("click", function () {
+    var d = dadosCotacao();
+    if (!d) return;
+    if (!window.jspdf || !window.jspdf.jsPDF) return;
+    function finish() {
+      var canvas = buildCotacaoCanvas(d.envia, d.recebe, d.data);
+      var JsPDF = window.jspdf.jsPDF;
+      var doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      var img = canvas.toDataURL("image/jpeg", 0.95);
+      doc.addImage(img, "JPEG", 0, 0, 210, 297);
+      doc.save("cotacao-jr-jamal.pdf");
+    }
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(finish).catch(finish);
+    } else {
+      finish();
+    }
   });
+
+  window.__buildCotacaoCanvas = buildCotacaoCanvas;
+  window.__dadosCotacao = dadosCotacao;
 
   updateDirUI();
   setTaxaUI();
