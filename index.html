@@ -177,12 +177,17 @@
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
     .btn {
+      flex: 1;
       width: 100%;
       border: none;
       border-radius: 999px;
       padding: 14px 18px;
-      margin-top: 4px;
       background: linear-gradient(135deg, var(--sky), var(--navy));
       color: #fff;
       font: inherit;
@@ -242,9 +247,13 @@
       · 1 RUB = <strong id="taxaValor">…</strong> MT
     </div>
 
-    <button type="button" class="btn" id="btnCopiar" disabled>Copiar cotação</button>
+    <div class="btn-row">
+      <button type="button" class="btn" id="btnCopiar" disabled>Copiar cotação</button>
+      <button type="button" class="btn" id="btnPdf" disabled>Baixar PDF</button>
+    </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
 (function () {
   var MARGEM = 1.15;
@@ -296,20 +305,24 @@
     document.getElementById("entrada").value = "";
     document.getElementById("saida").textContent = "";
     document.getElementById("btnCopiar").disabled = true;
+    document.getElementById("btnPdf").disabled = true;
   }
 
   function recalc() {
     var entrada = parseNum(document.getElementById("entrada").value);
     var saidaEl = document.getElementById("saida");
     var btn = document.getElementById("btnCopiar");
+    var btnPdf = document.getElementById("btnPdf");
     if (!(entrada > 0) || !(taxa > 0)) {
       saidaEl.textContent = "";
       btn.disabled = true;
+      btnPdf.disabled = true;
       return;
     }
     var saida = direcao === "mzn_rub" ? entrada / taxa / MARGEM : entrada * taxa;
     saidaEl.textContent = fmt(Math.round(saida), 0);
     btn.disabled = false;
+    btnPdf.disabled = false;
   }
 
   function textoCotacao() {
@@ -363,6 +376,41 @@
         document.body.removeChild(ta);
       });
     }
+  });
+
+  document.getElementById("btnPdf").addEventListener("click", function () {
+    var t = textoCotacao();
+    if (!t) return;
+    if (!window.jspdf || !window.jspdf.jsPDF) return;
+    var JsPDF = window.jspdf.jsPDF;
+    var doc = new JsPDF({ unit: "mm", format: "a4" });
+    var margin = 20;
+    var y = 22;
+    var logoImg = document.querySelector(".logo-wrap img");
+    if (logoImg && logoImg.src) {
+      try {
+        var lw = 70;
+        var lh = 40;
+        doc.addImage(logoImg.src, "JPEG", (210 - lw) / 2, y, lw, lh);
+        y += lh + 10;
+      } catch (e) {}
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(92, 10, 44);
+    doc.text("Câmbio & Transferências | Jr. Jamal", 105, y, { align: "center" });
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(28, 18, 22);
+    var lines = t.split(String.fromCharCode(10));
+    for (var i = 1; i < lines.length; i++) {
+      var line = lines[i];
+      if (!line) { y += 6; continue; }
+      doc.text(line, margin, y);
+      y += 9;
+    }
+    doc.save("cotacao-jr-jamal.pdf");
   });
 
   updateDirUI();
