@@ -316,23 +316,17 @@
     var entrada = parseNum(document.getElementById("entrada").value);
     var saida = direcao === "mzn_rub" ? entrada / taxa / MARGEM : entrada * taxa;
     if (!(entrada > 0) || !(saida > 0)) return "";
-    if (direcao === "mzn_rub") {
-      return [
-        "Cotação de câmbio",
-        "",
-        "Cliente envia: " + fmt(entrada, 0) + " MT",
-        "Cliente recebe: " + fmt(Math.round(saida), 0) + " RUB",
-        "Câmbio do dia: 1 RUB = " + fmt(taxa, 4) + " MT (" + taxaData + ")",
-        "Margem: 15%"
-      ].join("\\n");
-    }
+    var enviaMoeda = direcao === "mzn_rub" ? "MT" : "RUB";
+    var recebeMoeda = direcao === "mzn_rub" ? "RUB" : "MT";
     return [
-      "Cotação de câmbio",
+      "Câmbio & Transferências | Jr. Jamal",
       "",
-      "Cliente envia: " + fmt(entrada, 0) + " RUB",
-      "Cliente recebe: " + fmt(Math.round(saida), 0) + " MT",
-      "Câmbio do dia: 1 RUB = " + fmt(taxa, 4) + " MT (" + taxaData + ")"
-    ].join("\\n");
+      "Envia: " + fmt(entrada, 0) + " " + enviaMoeda,
+      "Recebe: " + fmt(Math.round(saida), 0) + " " + recebeMoeda,
+      "Câmbio do dia: " + taxaData,
+      "",
+      "https://is.gd/CambioJrJamal"
+    ].join(String.fromCharCode(10));
   }
 
   document.getElementById("btnMznRub").addEventListener("click", function () {
